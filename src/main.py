@@ -242,7 +242,7 @@ import datetime
 
 # === Suchraster definieren ===
 LEARNING_RATES = [1e-4, 5e-4]
-BETAS = [0.1, 0.5, 1.0]
+BETAS = [1.0]
 LATENT_DIMENSIONS_TO_TEST = [16, 32]
 AE_BATCH_SIZES = [32]
 AE_EPOCHS = [100]
@@ -315,7 +315,8 @@ for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
     
     # --- Save latent representations (use mu, not sampled z) ---
     # mu shape: (N, T_latent, latent_dim)
-    mu = vae_model.get_latent_mu(test_snippets).numpy()
+    mu = vae_model.get_latent_mu(test_snippets)
+    mu = np.asarray(mu)  # klappt für Tensor + already numpy
     
     # Aggregate over time to get one vector per snippet
     mu_mean = mu.mean(axis=1)  # (N, latent_dim)
@@ -357,9 +358,8 @@ for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
 # ---------------------------------------------------------------------
 # 6) Zusammenfassung speichern
 # ---------------------------------------------------------------------
-summary_path = run.run_dir / "summary.json"
-with open(summary_path, "w") as f:
-    json.dump(results_summary, f, indent=2)
+global_run = start_run({"kind": "summary"}, base_dir="runs", seed=42)
+summary_path = global_run.run_dir / "summary.json"
 
 print(f"\nAlle {len(experiments_subset)} Experimente abgeschlossen.")
 print(f"→ Zusammenfassung gespeichert unter: {summary_path}")
