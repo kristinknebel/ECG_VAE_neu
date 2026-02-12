@@ -116,50 +116,6 @@ def plot_training_history(run_dir: Path, out_dir: Path) -> None:
     print(f"[OK] Training-Verlauf gespeichert: {out}")
 
 
-def plot_codebook_usage(run_dir: Path, out_dir: Path) -> None:
-    counts_path = run_dir / "codebook_counts.npy"
-    idx_path = run_dir / "codebook_used_indices.npy"
-    usage_json = run_dir / "codebook_usage.json"
-
-    unique_indices = None
-    counts = None
-    num_embeddings = None
-
-    if counts_path.exists() and idx_path.exists():
-        counts = np.load(counts_path)
-        unique_indices = np.load(idx_path)
-        # num_embeddings evtl. aus usage_json
-        if usage_json.exists():
-            stats = load_json(usage_json)
-            num_embeddings = stats.get("num_embeddings")
-    elif usage_json.exists():
-        stats = load_json(usage_json)
-        unique_indices = np.asarray(stats.get("unique_indices", []))
-        counts = np.asarray(stats.get("counts", []))
-        num_embeddings = stats.get("num_embeddings")
-    else:
-        print(f"[WARN] Keine Codebook-Usage Dateien gefunden in {run_dir}")
-        return
-
-    if unique_indices is None or counts is None or len(unique_indices) == 0:
-        print(f"[WARN] Codebook-Usage ist leer in {run_dir}")
-        return
-
-    plt.figure(figsize=(10, 4))
-    plt.bar(unique_indices, counts)
-    title = "Codebook Usage"
-    if num_embeddings is not None:
-        title += f" ({len(unique_indices)}/{num_embeddings})"
-    plt.title(title)
-    plt.xlabel("Codebook Index")
-    plt.ylabel("Count")
-    plt.tight_layout()
-    out = out_dir / "codebook_usage.png"
-    plt.savefig(out, dpi=150)
-    plt.close()
-    print(f"[OK] Codebook-Usage Plot gespeichert: {out}")
-
-
 def _filter_tsne_points(
     X: np.ndarray,
     labels: np.ndarray,
@@ -296,11 +252,11 @@ def plot_latent_embeddings(
     umap_neighbors: int = 15,
     umap_min_dist: float = 0.1,
 ) -> None:
-    emb_path = run_dir / "snippet_embeddings.npy"
+    emb_path = run_dir / "snippet_embeddings_mu.npy"
     lab_path = run_dir / "snippet_labels.json"
-
+    
     if not emb_path.exists() or not lab_path.exists():
-        print(f"[WARN] snippet_embeddings.npy oder snippet_labels.json fehlen in {run_dir}")
+        print(f"[WARN] snippet_embeddings_mu.npy oder snippet_labels.json fehlen in {run_dir}")
         return
 
     X = np.load(emb_path)
@@ -425,16 +381,14 @@ def plot_reconstructions_from_cache(run_dir: Path, out_dir: Path, n_examples: in
     run_params = load_json(params_path)
 
     latent_dim = get_param(run_params, ["LATENT_DIMENSIONS", "LATENT_DIM", "latent_dim"], cast=int)
-    num_embeddings = get_param(run_params, ["NUM_EMBEDDINGS", "num_embeddings"], cast=int)
-    commitment_cost = get_param(run_params, ["COMMITMENT_COST", "commitment_cost"], cast=float)
+    beta = get_param(run_params, ["BETA", "beta", "COMMITMENT_COST", "commitment_cost"], cast=float, required=False, default=1.0)
 
     input_shape = (x.shape[1], x.shape[2])
 
-    model = VQVAE(
+    model = VAE(
         input_shape=input_shape,
         latent_dim=latent_dim,
-        num_embeddings=num_embeddings,
-        commitment_cost=commitment_cost
+        beta=beta
     )
 
     # Build (Subclassed model needs this before load_weights)
@@ -484,7 +438,6 @@ def main():
     print(f"[INFO] Output: {out_dir}")
 
     plot_training_history(run_dir, out_dir)
-    plot_codebook_usage(run_dir, out_dir)
     plot_latent_embeddings(
         run_dir, out_dir,
         max_points=args.tsne_points,
