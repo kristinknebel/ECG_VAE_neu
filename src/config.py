@@ -24,25 +24,11 @@ LATENT_DIMENSIONS_TO_TEST = [32] # Oder [8, 16, 32, 64, 128, 256]
 AE_EPOCHS = 50 #von 10 auf 100, dann auf 50 geändert
 AE_BATCH_SIZE = 32
  
-# --- VQ-VAE Spezifische Parameter ---
-NUM_EMBEDDINGS = 512 # Anzahl der Codevektoren im Codebook
-COMMITMENT_COST = 0.25 # Gewichtungsfaktor für den Commitment Loss (oft Beta genannt)
-LEARNING_RATE = 0.0001 # von 0.001 auf 0.0001
-'''
-Theoretischer Einschub zu Epochen und Batchsize:
-- eine Epoche = ein vollständiger Durchlauf des gesamten Trainingsdatensatzes durch das neuronale Netzwerk
-- underfitting: zu wenige Epochen können dazu führen, dass das Modell nicht ausreichend lernt und Daten nicht gut modelliert
-- overfitting: zu viele Epochen können dazu führen, dass das Modell die Daten 'auswendig lernt' und die Fähigkeit verliert, sich auf neue Daten anzupassen
+# --- VAE Spezifische Parameter ---
+BETA = 1.0  # oder z.B. 0.1 / 0.5 / 1.0 testen
 
-- batch size = Anzahl der Trainingsbeispiele, die gleichzeitig durch das neuronale Netzwerk geleitet werden, bevor die Modellparameter (Gewichte) aktualisiert werden
-- oft nicht praktikabel, den Gradienten für den gesamten Datensatz auf einmal zu berechnen -> Aufteilung in kleinere batches
-- Ablauf: Das Modell verarbeitet einen Batch von Daten, berechnet den Fehler für diesen Batch, berechnet dann die Gradienten basierend auf diesem Batch und aktualisiert die Modellgewichte 
-- dieser Prozess wiederholt sich für den nächsten Batch, bis alle Batches im Datensatz verarbeitet wurden (das ist dann eine Epoche)
-'''
 
-# --- Visualisierungsparameter ---
-VIS_N_COMPONENTS = 3 # Für 3D-Visualisierung
-VIS_METHOD = 'TSNE' # weitere Methode: 'UMAP'
+
 
 CATEGORY_COLORS = {
     "NORM": '#1f77b4', "LVH": '#ff7f0e', "CLBBB": '#2ca02c', "CRBBB": '#d62728',
