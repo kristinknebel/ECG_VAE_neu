@@ -45,7 +45,7 @@ DO_PLOTS = False #extra Skript für Plots
 # ---------------------------------------------------------------------
 params = {
     "LATENT_DIMENSIONS_TO_TEST": getattr(config, "LATENT_DIMENSIONS_TO_TEST", None),
-    "COMMITMENT_COST": getattr(config, "COMMITMENT_COST", None),
+    "BETA": getattr(config, "BETA", None),
     "LEARNING_RATE": getattr(config, "LEARNING_RATE", None),
     "AE_BATCH_SIZE": getattr(config, "AE_BATCH_SIZE", None),
     "AE_EPOCHS": getattr(config, "AE_EPOCHS", None),
@@ -279,7 +279,7 @@ for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
 
     params = {
         "LATENT_DIMENSIONS": latent_dim,
-        "COMMITMENT_COST": beta,
+        "BETA": beta,
         "LEARNING_RATE": lr,
         "AE_BATCH_SIZE": batch_size,
         "AE_EPOCHS": epochs,
@@ -347,7 +347,7 @@ for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
     results_summary.append({
         "run_dir": str(run.run_dir),
         "latent_dim": latent_dim,
-        "commitment_cost": beta,
+        "beta": beta,
         "learning_rate": lr,
         "epochs": epochs,
         "batch_size": batch_size,
@@ -360,6 +360,13 @@ for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
 # ---------------------------------------------------------------------
 global_run = start_run({"kind": "summary"}, base_dir="runs", seed=42)
 summary_path = global_run.run_dir / "summary.json"
+with open(summary_path, "w") as f:
+    json.dump(results_summary, f, indent=2)
+
+global_run = start_run({"kind": "summary"}, base_dir="runs", seed=42)
+summary_path = global_run.run_dir / "summary.json"
+with open(summary_path, "w") as f:
+    json.dump(results_summary, f, indent=2)
 
 print(f"\nAlle {len(experiments_subset)} Experimente abgeschlossen.")
 print(f"→ Zusammenfassung gespeichert unter: {summary_path}")
