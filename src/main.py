@@ -358,10 +358,6 @@ for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
 # ---------------------------------------------------------------------
 # 6) Zusammenfassung speichern
 # ---------------------------------------------------------------------
-global_run = start_run({"kind": "summary"}, base_dir="runs", seed=42)
-summary_path = global_run.run_dir / "summary.json"
-with open(summary_path, "w") as f:
-    json.dump(results_summary, f, indent=2)
 
 global_run = start_run({"kind": "summary"}, base_dir="runs", seed=42)
 summary_path = global_run.run_dir / "summary.json"
