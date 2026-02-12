@@ -9,7 +9,6 @@ from typing import List, Optional
 
 from src.plot_from_run import (
     plot_training_history,
-    plot_codebook_usage,
     plot_latent_embeddings,   # <-- statt plot_latent_tsne
     plot_reconstructions_from_cache,
 )
@@ -43,8 +42,6 @@ def main():
     ap.add_argument("--tsne_perplexity", type=int, default=30, help="t-SNE Perplexity")
     ap.add_argument("--only_latest", action="store_true", help="Nur den neuesten Run plotten")
     ap.add_argument("--latent_dim", type=int, default=None, help="Filter: LATENT_DIMENSIONS")
-    ap.add_argument("--num_embeddings", type=int, default=None, help="Filter: NUM_EMBEDDINGS")
-    ap.add_argument("--commitment_cost", type=float, default=None, help="Filter: COMMITMENT_COST")
     ap.add_argument("--learning_rate", type=float, default=None, help="Filter: LEARNING_RATE")
     ap.add_argument("--only_single", action="store_true")
     ap.add_argument("--whitelist", type=str, default=None)
@@ -70,7 +67,7 @@ def main():
 
     # Filter anwenden
     run_dirs = [rd for rd in run_dirs if run_matches_filters(
-        rd, args.latent_dim, args.num_embeddings, args.commitment_cost, args.learning_rate
+        rd, args.latent_dim, args.commitment_cost, args.learning_rate
     )]
 
     if not run_dirs:
@@ -88,7 +85,6 @@ def main():
         print(f"\n[RUN] {rd.name}")
         try:
             plot_training_history(rd, out_dir)
-            plot_codebook_usage(rd, out_dir)
             plot_latent_embeddings(
                 rd, out_dir,
                 max_points=args.tsne_points,
