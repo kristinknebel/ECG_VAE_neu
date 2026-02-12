@@ -16,7 +16,7 @@ from sklearn.manifold import TSNE
 
 # Projekt-Imports
 from src.snippet_cache import get_cache_paths, load_cached_snippets
-from src.models import VQVAE
+from src.models import VAE
 from src.visualization import plot_ecg_reconstructions
 from collections import Counter, defaultdict
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
@@ -387,7 +387,7 @@ def plot_latent_embeddings(
 def plot_reconstructions_from_cache(run_dir: Path, out_dir: Path, n_examples: int = 10, seed: int = 42) -> None:
     cache_ref_path = run_dir / "cache_ref.json"
     test_fp_path = run_dir / "test_fingerprints.npy"
-    weights_path = run_dir / "vqvae_final.weights.h5"
+    weights_path = run_dir / "vae_final.weights.h5"
     params_path = run_dir / "params.json"
 
     for p in [cache_ref_path, test_fp_path, weights_path, params_path]:
