@@ -21,14 +21,12 @@ from .data_loader import load_scp_codes, get_scp_code_list
 from .preprocessing import create_snippets, batch_process_relevant_ecgs
 
 # Modell & Training
-from .models import VQVAE, train_and_evaluate_vqvae
+from .models import VAE, train_and_evaluate_vae
 
 # Visualisierung & Analyse
 from .visualization import (
     visualize_latent_space,
     plot_ecg_reconstructions,
-    visualize_codebook_embeddings,
-    analyze_codebook_usage,
 )
 
 from pathlib import Path
@@ -362,32 +360,8 @@ for (latent_dim, num_emb, beta, lr, batch_size, epochs) in experiments_subset:
         else:
             print("Keine Single-Label-Snippets (TEST) für die Latentraum-Visualisierung vorhanden.")
 
-    # --- (c) Codebook Embeddings ---
-    if DO_PLOTS:
-        print("  → Visualisiere Codebook-Embeddings…")
-        visualize_codebook_embeddings(
-            vq_vae_model.vq_layer,
-            n_components=getattr(config, "VIS_N_COMPONENTS", 3),
-            method=getattr(config, "VIS_METHOD", "TSNE"),
-            filename=str(run.run_dir / f"codebooks_embeddings_TSNE_{params_str}.html"),
-            params_info=params_str,
-        )
 
-    # --- (d) Codebook-Nutzung ---
-    print("  → Analysiere Codebook-Nutzung…")
-    stats = analyze_codebook_usage(vq_vae_model, (x for x in [test_snippets]), max_batches=1, plot=False)
-    np.save(run.run_dir / "codebook_used_indices.npy", np.asarray(stats["unique_indices"]))      # Codebook-Usage Rohdaten speichern (wie MCG)
-    np.save(run.run_dir / "codebook_counts.npy", np.asarray(stats["counts"]))
-    with open(run.run_dir / "codebook_usage.json", "w") as f:
-        json.dump({k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in stats.items()}, f, indent=2)
-    if DO_PLOTS:
-        plt.figure(figsize=(10, 4))
-        plt.bar(stats["unique_indices"], stats["counts"], color="steelblue")
-        plt.title(f"Codebook-Nutzung: {len(stats['unique_indices'])}/{stats['num_embeddings']}")
-        plt.xlabel("Index"); plt.ylabel("Häufigkeit"); plt.tight_layout()
-        plt.savefig(run.run_dir / "codebook_usage.png", dpi=150)
-        plt.close()    
-
+    
     # --- (e) Trainingsverlauf speichern ---
     if hasattr(history, "history"):
         with open(run.run_dir / "history.json", "w") as f:
