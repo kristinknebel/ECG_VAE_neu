@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=vqvae_plots
-#SBATCH --chdir=/users/stud/knebelkr/masterarbeit/VQ_VAE_0602
-#SBATCH --output=logs/plots_%A.out
-#SBATCH --error=logs/plots_%A.err
+#SBATCH --job-name=vae_plots
+#SBATCH --chdir=/users/stud/knebelkr/masterarbeit
+#SBATCH --output=logs/vae_plots_%A.out
+#SBATCH --error=logs/vae_plots_%A.err
 #SBATCH --time=12:00:00
 #SBATCH --mem=60G
 #SBATCH --cpus-per-task=4
@@ -11,21 +11,44 @@
 #SBATCH --mail-type=END,FAIL
 
 set -euo pipefail
-mkdir -p logs
 
+# === Pfade ===
+BASE_DIR="/users/stud/knebelkr/masterarbeit"
+PROJECT_DIR="${BASE_DIR}/VAE_1302"
+LOG_DIR="${BASE_DIR}/logs"
+
+mkdir -p "${LOG_DIR}"
+
+# === Conda aktivieren ===
 source /opt/conda/etc/profile.d/conda.sh
 conda activate tf_env
-export PYTHONPATH="$PWD"
 
+# === Ins Projekt wechseln ===
+cd "${PROJECT_DIR}"
+
+# Wichtig: damit "python -m src.plot_from_run" src findet
+export PYTHONPATH="${PROJECT_DIR}"
+
+# Optional: Threads begrenzen (oft stabiler auf Cluster)
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+# === Parameter-Gitter ===
 TSNE_POINTS=(3000 5000 8000)
 TSNE_PERP=(20 30 40)
 UMAP_NEIGH=(5 15 30)
 UMAP_DIST=(0.1 0.5)
 
-for rd in \
-  runs/20260212_170739_991_p2956471__L16_N256_C0_25_LR5e-04_A32 \
-  runs/20260212_195934_057_p2994000__L32_N128_C0_5_LR5e-04_A32
-do
+# === Welche Runs plotten? ===
+# Trage hier deine VAE-Run-Ordner ein (relative Pfade ab PROJECT_DIR)
+RUN_DIRS=(
+  "runs/<DEIN_RUN_1>"
+  "runs/<DEIN_RUN_2>"
+)
+
+for rd in "${RUN_DIRS[@]}"; do
   [ -d "$rd" ] || { echo "[WARN] missing: $rd"; continue; }
 
   for pts in "${TSNE_POINTS[@]}"; do
@@ -47,7 +70,6 @@ do
             --umap_neighbors "$nn" \
             --umap_min_dist "$md" \
             --only_single \
-            --whitelist "NORM,AFIB,AFLT,IMI,ASMI,AMI,ISC_,ISCAL,ISCIN,ISCIL,LVH,IVCD,IRBBB" \
             --per_class 200
 
         done
