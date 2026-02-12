@@ -45,7 +45,6 @@ DO_PLOTS = False #extra Skript für Plots
 # ---------------------------------------------------------------------
 params = {
     "LATENT_DIMENSIONS_TO_TEST": getattr(config, "LATENT_DIMENSIONS_TO_TEST", None),
-    "NUM_EMBEDDINGS": getattr(config, "NUM_EMBEDDINGS", None),
     "COMMITMENT_COST": getattr(config, "COMMITMENT_COST", None),
     "LEARNING_RATE": getattr(config, "LEARNING_RATE", None),
     "AE_BATCH_SIZE": getattr(config, "AE_BATCH_SIZE", None),
@@ -243,21 +242,19 @@ import datetime
 
 # === Suchraster definieren ===
 LEARNING_RATES = [1e-4, 5e-4]
-COMMITMENT_COSTS = [0.1, 0.25, 0.5]
+BETAS = [0.1, 0.5, 1.0]
 LATENT_DIMENSIONS_TO_TEST = [16, 32]
-NUM_EMBEDDINGS_TO_TEST = [64, 128]
 AE_BATCH_SIZES = [32]
 AE_EPOCHS = [100]
 
-# === Alle Kombinationen erzeugen ===
 experiments = list(product(
     LATENT_DIMENSIONS_TO_TEST,
-    NUM_EMBEDDINGS_TO_TEST,
-    COMMITMENT_COSTS,
+    BETAS,
     LEARNING_RATES,
     AE_BATCH_SIZES,
     AE_EPOCHS,
 ))
+
 print(f"Gesamtanzahl Experimente: {len(experiments)}")
 
 # === Range-Filter (für parallele Ausführung) ===
@@ -273,16 +270,15 @@ results_summary = []
 # ---------------------------------------------------------------------
 # Trainingsschleife
 # ---------------------------------------------------------------------
-for (latent_dim, num_emb, beta, lr, batch_size, epochs) in experiments_subset:
+for (latent_dim, beta, lr, batch_size, epochs) in experiments_subset:
     exp_name = (
-        f"LD{latent_dim}_Emb{num_emb}_Cost{beta}_LR{lr:.0e}_"
+        f"LD{latent_dim}_Cost{beta}_LR{lr:.0e}_"
         f"Epochs{epochs}_Batch{batch_size}"
     )
     print(f"\n--- Starte Experiment: {exp_name} ---")
 
     params = {
         "LATENT_DIMENSIONS": latent_dim,
-        "NUM_EMBEDDINGS": num_emb,
         "COMMITMENT_COST": beta,
         "LEARNING_RATE": lr,
         "AE_BATCH_SIZE": batch_size,
@@ -310,55 +306,34 @@ for (latent_dim, num_emb, beta, lr, batch_size, epochs) in experiments_subset:
         )
 
     # --- Training ---
-    vq_vae_model, history, total_loss = train_and_evaluate_vqvae(
+    vae_model, history, total_loss = train_and_evaluate_vae(
         train_snippets, test_snippets, input_shape, latent_dim,
-        num_emb, beta, epochs, batch_size, learning_rate=lr
+        beta=beta, epochs=epochs, batch_size=batch_size, learning_rate=lr
     )
-    # --- Model speichern (wie MCG) ---
-    vq_vae_model.save_weights(run.run_dir / "vqvae_final.weights.h5")
-    # --- Codebook Embeddings speichern ---
-    np.save(run.run_dir / "codebook_embeddings.npy",
-            vq_vae_model.vq_layer.embeddings.numpy())
-    # --- (A3) Quantisierte Snippet-Embeddings speichern (wie MCG beat_embeddings) ---
-    quantized = vq_vae_model.get_latent_representation(test_snippets).numpy()  # (N, T', latent_dim)
-    quantized_mean = quantized.mean(axis=1)  # (N, latent_dim) -> pro Snippet aggregiert
+    # --- Save trained VAE weights ---
+    vae_model.save_weights(run.run_dir / "vae_final.weights.h5")
     
-    np.save(run.run_dir / "snippet_embeddings.npy", quantized_mean)
+    # --- Save latent representations (use mu, not sampled z) ---
+    # mu shape: (N, T_latent, latent_dim)
+    mu = vae_model.get_latent_mu(test_snippets).numpy()
+    
+    # Aggregate over time to get one vector per snippet
+    mu_mean = mu.mean(axis=1)  # (N, latent_dim)
+    
+    np.save(run.run_dir / "snippet_embeddings_mu.npy", mu_mean)
+    
+    # Optional: also save full mu over time (useful for analysis)
+    np.save(run.run_dir / "snippet_embeddings_mu_full.npy", mu)
+    
+    # Metadata
     np.save(run.run_dir / "snippet_ecg_ids.npy", np.asarray(ecg_ids_test))
     with open(run.run_dir / "snippet_labels.json", "w") as f:
         json.dump([str(x) for x in labels_test], f, indent=2)
 
     params_str = (
-        f"LD{latent_dim}_Emb{num_emb}_Cost{beta}_LR{lr:.0e}_"
+        f"LD{latent_dim}_Cost{beta}_LR{lr:.0e}_"
         f"Epochs{epochs}_Batch{batch_size}"
     )
-
-    # --- (a) Rekonstruktionen ---
-    
-    if DO_PLOTS:
-        print("  → Speichere Rekonstruktionen…")
-        reconstructed_test_snippets = vq_vae_model.predict(test_snippets, verbose=0)
-        plot_ecg_reconstructions(
-            test_snippets, reconstructed_test_snippets, num_examples=5,
-            filename=str(run.run_dir / f"ecg_reconstruction_{params_str}.png")
-        )
-
-    # --- (b) Latent-Space ---
-    if DO_PLOTS:
-        print(f"  → Single-Label-Snippets (TEST) verfügbar: {len(single_label_labels_test)}")
-        if len(single_label_labels_test) > 0:
-            print("  → Visualisiere quantisierten Latent-Raum…")
-            visualize_latent_space(
-                vq_vae_model,
-                single_label_snippets_test,
-                single_label_labels_test,
-                n_components=getattr(config, "VIS_N_COMPONENTS", 3),
-                method=getattr(config, "VIS_METHOD", "TSNE"),
-                filename=str(run.run_dir / f"VQ-VAE_3d_latent_space_quantized_TSNE_{params_str}.html"),
-                params_info=params_str,
-            )
-        else:
-            print("Keine Single-Label-Snippets (TEST) für die Latentraum-Visualisierung vorhanden.")
 
 
     
@@ -371,13 +346,12 @@ for (latent_dim, num_emb, beta, lr, batch_size, epochs) in experiments_subset:
     results_summary.append({
         "run_dir": str(run.run_dir),
         "latent_dim": latent_dim,
-        "num_embeddings": num_emb,
         "commitment_cost": beta,
         "learning_rate": lr,
         "epochs": epochs,
         "batch_size": batch_size,
         "val_loss": float(np.min(history.history["val_loss"])) if hasattr(history, "history") else None,
-        "codebook_utilization": stats["utilization"],
+
     })
 
 # ---------------------------------------------------------------------
