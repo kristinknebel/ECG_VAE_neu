@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, Model
 import numpy as np # Wird für tf.Variable Initialisierung benötigt
 
-from .config import LEARNING_RATE
+
 # Hypersphere wird aktuell nicht genutzt
 class HypersphereNormalization(layers.Layer):
     def __init__(self, **kwargs):
