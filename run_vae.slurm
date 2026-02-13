@@ -3,7 +3,7 @@
 #SBATCH --chdir=/users/stud/knebelkr/masterarbeit/VAE_1302
 #SBATCH --output=/users/stud/knebelkr/masterarbeit/VAE_1302/logs/vae_%A_%a.out
 #SBATCH --error=/users/stud/knebelkr/masterarbeit/VAE_1302/logs/vae_%A_%a.err
-#SBATCH --array=0-23%4
+#SBATCH --array=0-3
 #SBATCH --time=24:00:00
 #SBATCH --mem=60G
 #SBATCH --cpus-per-task=4
