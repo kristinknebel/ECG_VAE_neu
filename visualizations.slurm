@@ -44,8 +44,10 @@ UMAP_DIST=(0.1 0.5)
 # === Welche Runs plotten? ===
 # Trage hier deine VAE-Run-Ordner ein (relative Pfade ab PROJECT_DIR)
 RUN_DIRS=(
-  "runs/<DEIN_RUN_1>"
-  "runs/<DEIN_RUN_2>"
+  "runs/20260213_122952_973_p3608263__L16_B1_0_LR1e-04_A32"
+  "runs/20260213_122955_525_p3220967__L16_B1_0_LR5e-04_A32"
+  "runs/20260213_122955_553_p3117114__L32_B1_0_LR1e-04_A32"
+  "runs/20260213_122955_584_p3067316__L32_B1_0_LR5e-04_A32"
 )
 
 for rd in "${RUN_DIRS[@]}"; do
